@@ -31,7 +31,8 @@ class ActionDefaultLogInterceptor implements Interceptor {
         if (c && a) {
             try {
                 User user = springSecurityService.currentUser as User
-                log.info "AUOINT ${c} ${a} ${user.username} ${request.post ? 'post' : request.get ? 'get' : 'unknown'} ${request.remoteHost}|${request.getHeader('user-agent')} $sanitizedParams ${request.forwardURI}"
+                String actor = user?.username ?: 'anonymous/worker'
+                log.info "AUOINT ${c} ${a} ${actor} ${request.post ? 'post' : request.get ? 'get' : 'unknown'} ${request.remoteHost}|${request.getHeader('user-agent')} $sanitizedParams ${request.forwardURI}"
             } catch (ignored) {
                 log.error "AUOEXP ${params.get('controller')} ${params.get('action')} ${ignored.message}"
             }
