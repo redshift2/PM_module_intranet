@@ -1,6 +1,15 @@
 package taack.website
 
 import crew.config.SupportedLanguage
+import crew.User
+import plm.PlmFreeCadPart
+import plm.PlmPartLifecycleState
+import workspace.PlmWorkspace
+import workspace.PlmWorkspaceMember
+import changemanagement.DesignChangeNotice
+import changemanagement.DcnPart
+import serveradmin.ServerJob
+import serveradmin.ServerEvent
 import grails.compiler.GrailsCompileStatic
 import grails.plugin.springsecurity.annotation.Secured
 import org.codehaus.groovy.runtime.MethodClosure as MC
@@ -17,7 +26,6 @@ import taack.ui.dump.Parameter
 TODO: Add an infrastructure to list new stuffs from a user and a timestamp
  */
 
-@GrailsCompileStatic
 @Secured(['isAuthenticated()'])
 class RootController {
     TaackUiService taackUiService
@@ -33,24 +41,68 @@ class RootController {
         m
     }
 
+    def springSecurityService
+
+    /**
+     * Personal home page. All collections are scoped to the authenticated user.
+     * DCN participation is derived from DCN_CREATE audit events and part links;
+     * the current DCN domain has no owner/assignee field.
+     */
     def index() {
-        UiBlockSpecifier b = new UiBlockSpecifier().ui {
-            row {
-                TaackAppRegisterService.apps.eachWithIndex { TaackApp a, int i ->
-                    col BlockSpec.Width.FLEX, {
-                        show(new UiShowSpecifier().ui {
-                            inlineHtml(
-                                    """\
-                                    <a href="${new Parameter().urlMapped(a.entryPoint)}">
-                                        <div class='taack-app' style='width: 220px; padding: 35px; text-align: center;display: inline-grid;'>${a.svg}<div><b>${a.label}</b><br>${a.desc}</div></div>
-                                    </a>
-                                    """.stripIndent())
-                        })
-                    }
+        User current = springSecurityService.currentUser as User
+        String username = current?.username
+        boolean plmAccess = request.isUserInRole('ROLE_PLM_USER') ||
+                            request.isUserInRole('ROLE_ADMIN')
+        if (!current || !plmAccess) {
+            return [plmAccess: false, dcns: [], parts: [], workspaces: [], jobs: []]
+        }
+
+        List<PlmFreeCadPart> parts = PlmFreeCadPart.findAllByCheckedOutBy(
+                current, [sort: 'checkedOutAt', order: 'desc', max: 200]).findAll {
+            it.active == true && it.nextVersion == null &&
+                    it.lifecycleState == PlmPartLifecycleState.CHECKED_OUT
+        }
+
+        List<PlmWorkspace> owned = PlmWorkspace.findAllByOwner(current)
+        List<PlmWorkspaceMember> memberships = PlmWorkspaceMember.findAllByUser(current)
+        List<PlmWorkspace> workspaces = (owned + memberships.collect { it.workspace })
+                .findAll { it != null }.unique { it.id }
+                .sort { it.name?.toLowerCase() ?: '' }
+
+        List<ServerJob> jobs = username ?
+                ServerJob.findAllBySubmittedBy(username,
+                        [sort: 'dateCreated', order: 'desc', max: 100]) : []
+
+        // Existing audit events record the creator's username, while the
+        // DCN itself does not currently contain a user ownership field.
+        Set<Long> dcnIds = [] as Set<Long>
+        if (username) {
+            ServerEvent.findAllByEventTypeAndActor('DCN_CREATE', username,
+                    [sort: 'dateCreated', order: 'desc', max: 1000]).each { event ->
+                if (event.entityType == 'DesignChangeNotice' &&
+                        event.entityId?.isLong()) {
+                    dcnIds.add(event.entityId.toLong())
                 }
             }
         }
-        taackUiService.show(b, buildMenu())
+        // A checked-out part associated with a DCN also establishes involvement.
+        parts.each { part ->
+            if (part.dcn) {
+                def linkedDcn = DesignChangeNotice.findByDcnNumber(part.dcn)
+                if (linkedDcn) dcnIds.add(linkedDcn.id)
+            }
+            DcnPart.findAllByPart(part).each { link ->
+                if (link.dcn?.id) dcnIds.add(link.dcn.id)
+            }
+        }
+        List<DesignChangeNotice> dcns = dcnIds ?
+                DesignChangeNotice.findAllByIdInList(dcnIds.toList(),
+                        [sort: 'lastUpdated', order: 'desc', max: 200]).findAll {
+                    it.status != 'RELEASED' && it.status != 'CANCELLED'
+                } : []
+
+        [plmAccess: true, currentUserId: current.id, dcns: dcns, parts: parts,
+         workspaces: workspaces, jobs: jobs]
     }
 
     def search(String q) {

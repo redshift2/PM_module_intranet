@@ -14,57 +14,23 @@
  */
 package taack.website
 
-import crew.User
-import crew.config.SupportedLanguage
-import grails.compiler.GrailsCompileStatic
 import grails.config.Config
 import grails.core.support.GrailsConfigurationAware
 import grails.plugin.springsecurity.SpringSecurityService
 import org.springframework.security.access.annotation.Secured
-import taack.render.TaackUiService
-import taack.ui.dsl.UiBlockSpecifier
-import taack.ui.dsl.UiFormSpecifier
-import taack.ui.dsl.UiMenuSpecifier
 
-@GrailsCompileStatic
 @Secured('permitAll')
 class LoginController extends grails.plugin.springsecurity.LoginController implements GrailsConfigurationAware {
 
-	TaackUiService taackUiService
-
-	private static UiMenuSpecifier buildMenu(String q = null) {
-		UiMenuSpecifier m = new UiMenuSpecifier()
-		m.ui {
-			menuOptions(SupportedLanguage.fromContext())
-		}
-		m
-	}
-
-	def auth() {
-		ConfigObject conf = getConf()
-
-		if ((springSecurityService as SpringSecurityService).isLoggedIn()) {
-			redirect uri: conf.successHandler['defaultTargetUrl']
-			return
-		}
-
-		String postUrl = request.contextPath + conf.apf['filterProcessesUrl']
-
-		User user = new User()
-
-		UiFormSpecifier f = new UiFormSpecifier().ui(user) {
-			section 'Credentials', {
-				field user.username_
-				field user.password_
-				field user.rememberMe_
-			}
-			formAction('Login', postUrl)
-		}
-
-		taackUiService.show(new UiBlockSpecifier().ui {
-			form f
-		}, buildMenu())
-	}
+    def auth() {
+        ConfigObject conf = getConf()
+        if ((springSecurityService as SpringSecurityService).isLoggedIn()) {
+            redirect uri: conf.successHandler['defaultTargetUrl']
+            return
+        }
+        String postUrl = request.contextPath + conf.apf['filterProcessesUrl']
+        render(view: '/login/auth', model: [postUrl: postUrl])
+    }
 
 	@Override
 	void setConfiguration(Config co) {

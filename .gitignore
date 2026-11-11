@@ -10,3 +10,14 @@ out/
 .project
 .settings
 .classpath
+app/crew
+.gitignore
+app/PM_module_change_management
+app/PM_module_materials
+.gitignore
+.gitignore
+.gitignore
+app/plm
+.gitignore
+app/workspace
+app/PM_module_server-admin
