@@ -29,7 +29,7 @@ class LoginController extends grails.plugin.springsecurity.LoginController imple
             return
         }
         String postUrl = request.contextPath + conf.apf['filterProcessesUrl']
-        render(view: '/login/auth', model: [postUrl: postUrl])
+        render(view: '/login/auth', model: [postUrl: postUrl, oidcProviders: serveradmin.OidcProvider.findAllByEnabled(true, [sort:'name'])])
     }
 
 	@Override

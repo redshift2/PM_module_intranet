@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     implementation("org.apache.tomcat:tomcat-jdbc")
+    implementation("com.nimbusds:nimbus-jose-jwt:9.37.3")
 }
 //application {
 //    mainClass.set("taack.website.Application")

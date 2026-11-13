@@ -19,12 +19,13 @@ footer{text-align:center;padding:18px;color:#a8b8c8;font-size:12px}
 <header>Parts Manager</header>
 <main><section class="card" aria-labelledby="login-title"><h1 id="login-title">Sign in</h1><div class="inner">
 <p class="intro">Sign in to access your Parts Manager workspace.</p>
-<g:if test="${params.login_error || params.error}"><div class="alert error" role="alert">Invalid username or password. Please try again.</div></g:if>
+<g:if test="${params.login_error || params.error}"><div class="alert error" role="alert">Sign-in failed. Please try again.</div></g:if>
+<g:if test="${flash.error}"><div class="alert error">${flash.error?.encodeAsHTML()}</div></g:if>
 <g:if test="${params.logout}"><div class="alert info" role="status">You have been signed out.</div></g:if>
 <form action="${postUrl?.encodeAsHTML()}" method="post" autocomplete="on">
 <label for="username">Username</label><input id="username" name="username" type="text" autocomplete="username" required autofocus>
 <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required>
 <label class="remember"><input type="checkbox" name="rememberMe" value="on"> Remember me</label>
 <button type="submit">Sign in</button>
-</form></div></section></main><footer>Parts Manager · Secure access</footer>
+</form><g:if test="${oidcProviders}"><hr style="margin:24px 0;border:0;border-top:1px solid #526171"/><p class="intro">Or sign in with an external provider</p><g:each in="${oidcProviders}" var="p"><p><a style="display:block;text-align:center;background:#176fb7;color:white;padding:12px;border-radius:6px;text-decoration:none" href="${request.contextPath}/oidcLogin/start?id=${p.id}">Sign in with ${p.name?.encodeAsHTML()}</a></p></g:each></g:if><p style="margin-top:18px;font-size:13px"><a style="color:#83c5ff" href="${request.contextPath}/oidcLogin/account">Account Connections</a> (sign in locally first to link)</p></div></section></main><footer>Parts Manager · Secure access</footer>
 </body></html>
