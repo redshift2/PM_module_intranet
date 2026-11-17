@@ -30,6 +30,11 @@ class BootStrap {
                 r.save(flush: true)
                 if (r.hasErrors()) log.error "${r.errors}"
             }
+            def remoteWorkRole = Role.findByAuthority('ROLE_CREATE_REMOTE_WORK')
+            if (!remoteWorkRole) {
+                remoteWorkRole = new Role(authority: 'ROLE_CREATE_REMOTE_WORK')
+                remoteWorkRole.save(failOnError: true, flush: true)
+            }
             def u = User.findByUsername('admin')
             if (!u) {
                 u = new User(username: 'admin', password: "{noop}$adminPassword", businessUnit: BusinessUnit.IT)
